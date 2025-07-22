@@ -145,6 +145,28 @@ app.listen(process.env.PORT || 5000, () =>
 
 ---
 
+### ✅ Create the error handler middleware
+
+```js
+// middleware/errorHandler.js
+
+module.exports = (err, req, res, next) => {
+  console.error(err.stack); // log error (optional)
+
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+
+  res.status(statusCode).json({
+    success: false,
+    message,
+    // optionally include stack trace only in dev
+    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+  });
+};
+```
+
+---
+
 ### ✅ `config/db.js` — MongoDB Connection
 
 ```js
@@ -215,7 +237,7 @@ exports.registerUser = async (req, res, next) => {
     const data = await userService.register(req.body);
     res.status(201).json(data);
   } catch (err) {
-    next(err);
+    next(err); // pass error to global error handler
   }
 };
 
@@ -394,19 +416,6 @@ Use tools like:
 - Use **dotenv** for managing secrets.
 - Structure your app modularly — don’t keep all logic in one file.
 - Combine with **MongoDB** (Mongoose) or **MySQL** (Sequelize) for DB operations.
-
----
-
-You're welcome, Shubham! Now let’s go **in-depth into routing in Node.js with Express.js**, including:
-
-- **Basic Routing**
-- **Dynamic Routing**
-- **Nested & Modular Routing**
-- **Route Parameters vs Query Strings**
-- **Middleware per Route**
-- **HTTP Methods**
-- **Controller-based routing**
-- **Best Practices**
 
 ---
 
@@ -958,10 +967,10 @@ Incoming Request → Middleware 1 → Middleware 2 → Route Handler → Respons
 
 ## 🧩 Why Use Middleware?
 
-✅ Separation of concerns
-✅ Reusability (e.g. auth, logging)
-✅ Centralized logic (e.g. error handling)
-✅ Cleaner code in route handlers
+- ✅ Separation of concerns
+- ✅ Reusability (e.g. auth, logging)
+- ✅ Centralized logic (e.g. error handling)
+- ✅ Cleaner code in route handlers
 
 ---
 
@@ -1902,1176 +1911,24 @@ const upload = multer({
 
 ---
 
-# 📦 What is Mongoose?
+## 🔷 What is Mongoose?
 
-> Mongoose is an **Object Data Modeling (ODM)** library for MongoDB and Node.js. It provides:
+**Mongoose** is an **Object Data Modeling (ODM)** library for **MongoDB** and **Node.js**. It provides:
 
-- Schema-based modeling
-- Data validation
-- Middleware/hooks
-- Query building with chaining
-- Relationship support
+- Schema-based solution to model application data
+- Built-in type casting, validation, query building, business logic hooks, and more
 
 ---
 
-# 🧱 Step-by-Step: Mongoose + Express Integration
-
----
-
-## ✅ 1. Setup Project
+## 📦 Installation
 
 ```bash
-mkdir express-mongoose-app && cd express-mongoose-app
-npm init -y
-npm install express mongoose
+npm install mongoose
 ```
 
 ---
 
-## ✅ 2. Create Folder Structure
-
-```
-express-mongoose-app/
-│
-├── models/         ← Mongoose schemas/models
-│   └── User.js
-│
-├── routes/         ← Express routers
-│   └── userRoutes.js
-│
-├── controllers/    ← Logic separated from routes
-│   └── userController.js
-│
-├── app.js          ← Main entry
-└── .env            ← DB connection string
-```
-
----
-
-## ✅ 3. Connect to MongoDB using Mongoose
-
-```js
-// app.js
-const express = require("express");
-const mongoose = require("mongoose");
-const userRoutes = require("./routes/userRoutes");
-require("dotenv").config();
-
-const app = express();
-
-// Middlewares
-app.use(express.json());
-app.use("/api/users", userRoutes);
-
-// Connect to DB
-mongoose
-  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/testdb")
-  .then(() => {
-    console.log("MongoDB connected");
-    app.listen(3000, () => console.log("Server running on port 3000"));
-  })
-  .catch((err) => console.error("MongoDB connection error:", err));
-```
-
----
-
-## ✅ 4. Define Schema and Model
-
-```js
-// models/User.js
-const mongoose = require("mongoose");
-
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "Name is required"],
-    minlength: 3,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  age: Number,
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-module.exports = mongoose.model("User", userSchema);
-```
-
----
-
-## ✅ 5. Create Controller Functions
-
-```js
-// controllers/userController.js
-const User = require("../models/User");
-
-// GET all users
-exports.getUsers = async (req, res) => {
-  const users = await User.find();
-  res.json(users);
-};
-
-// POST create new user
-exports.createUser = async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-    res.status(201).json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-// PUT update
-exports.updateUser = async (req, res) => {
-  const { id } = req.params;
-  const updated = await User.findByIdAndUpdate(id, req.body, { new: true });
-  res.json(updated);
-};
-
-// DELETE user
-exports.deleteUser = async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  res.json({ message: "User deleted" });
-};
-```
-
----
-
-## ✅ 6. Setup Routes
-
-```js
-// routes/userRoutes.js
-const express = require("express");
-const router = express.Router();
-const userController = require("../controllers/userController");
-
-router.get("/", userController.getUsers);
-router.post("/", userController.createUser);
-router.put("/:id", userController.updateUser);
-router.delete("/:id", userController.deleteUser);
-
-module.exports = router;
-```
-
----
-
-## ✅ 7. Example `.env` File
-
-```
-MONGO_URI=mongodb://localhost:27017/userapp
-```
-
-Use with:
-
-```bash
-npm install dotenv
-```
-
----
-
-# 🔁 Mongoose Model Methods
-
-| Method                            | Description  |
-| --------------------------------- | ------------ |
-| `User.find()`                     | Get all      |
-| `User.findById(id)`               | Get by ID    |
-| `User.create(obj)`                | Insert       |
-| `User.findByIdAndUpdate(id, obj)` | Update       |
-| `User.findByIdAndDelete(id)`      | Delete       |
-| `User.findOne({ email })`         | Query single |
-
----
-
-# 🧪 Bonus: Schema Validations
-
-```js
-email: {
-  type: String,
-  required: true,
-  match: /.+\@.+\..+/,
-  unique: true
-}
-```
-
----
-
-# 🔗 Real World Use Case: Auth
-
-- User Registration → `User.create()`
-- Login → `User.findOne({ email })`
-- Reset Password → `User.updateOne()`
-
----
-
-# ✅ Summary
-
-| Task        | Code                                        |
-| ----------- | ------------------------------------------- |
-| Setup       | `mongoose.connect(...)`                     |
-| Schema      | `new mongoose.Schema({})`                   |
-| Model       | `mongoose.model('User', schema)`            |
-| CRUD        | `create`, `find`, `findByIdAndUpdate`, etc. |
-| Integration | Use in controller functions and route       |
-
----
-
-## 🔷 What is a Mongoose Schema?
-
-> A **Schema** in Mongoose defines the **structure**, **default values**, **validators**, and **types** of the data in a MongoDB collection.
-
-It's like a blueprint for documents in a collection.
-
----
-
-## 🔧 Basic Setup Example
-
-```js
-const mongoose = require("mongoose");
-
-// Step 1: Define the schema
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: String,
-  age: Number,
-});
-
-// Step 2: Create the model
-const User = mongoose.model("User", userSchema);
-```
-
----
-
-## 🧠 Field Types in Schema
-
-Mongoose supports most JavaScript data types:
-
-| Type       | Description                                        |
-| ---------- | -------------------------------------------------- |
-| `String`   | Text                                               |
-| `Number`   | Numeric                                            |
-| `Boolean`  | true/false                                         |
-| `Date`     | Date value                                         |
-| `Buffer`   | Binary data (file/image)                           |
-| `ObjectId` | MongoDB ObjectID (for referencing)                 |
-| `Array`    | List of values                                     |
-| `Mixed`    | Any type of data (not recommended for strict apps) |
-| `Map`      | Key-value pairs                                    |
-
----
-
-## ✍️ Full Schema with Options
-
-```js
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 2,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    select: false, // hide from queries by default
-  },
-  age: {
-    type: Number,
-    default: 18,
-  },
-  isAdmin: {
-    type: Boolean,
-    default: false,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-```
-
----
-
-## 🧪 Real-world Example: Product Schema
-
-```js
-const productSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: [true, "Product title is required"],
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: [0, "Price must be positive"],
-  },
-  tags: [String], // array of strings
-  inStock: {
-    type: Boolean,
-    default: true,
-  },
-});
-```
-
----
-
-## 🧩 Schema Methods
-
-### 🔹 Instance Methods
-
-```js
-userSchema.methods.isAdult = function () {
-  return this.age >= 18;
-};
-```
-
-Usage:
-
-```js
-const user = await User.findById(id);
-if (user.isAdult()) {
-  // do something
-}
-```
-
----
-
-### 🔹 Static Methods
-
-```js
-userSchema.statics.findByEmail = function (email) {
-  return this.findOne({ email });
-};
-```
-
-Usage:
-
-```js
-const user = await User.findByEmail("test@example.com");
-```
-
----
-
-### 🔹 Virtuals (computed fields)
-
-```js
-userSchema.virtual("fullName").get(function () {
-  return this.firstName + " " + this.lastName;
-});
-```
-
-> Virtuals don’t get stored in DB but are accessible like normal fields.
-
----
-
-## 🧹 Middleware (Hooks)
-
-```js
-userSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
-```
-
-Other middleware types:
-`pre/post` for `save`, `remove`, `find`, `updateOne`, etc.
-
----
-
-## 🔄 Nested Schema
-
-```js
-const addressSchema = new mongoose.Schema({
-  city: String,
-  zip: String,
-});
-
-const userSchema = new mongoose.Schema({
-  name: String,
-  address: addressSchema,
-});
-```
-
----
-
-## 🔗 Schema for Referencing (ObjectId)
-
-```js
-const postSchema = new mongoose.Schema({
-  title: String,
-  author: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-  },
-});
-```
-
-Then, when querying:
-
-```js
-Post.find().populate("author");
-```
-
----
-
-## ✅ Summary
-
-| Feature                 | Use                              |
-| ----------------------- | -------------------------------- |
-| `type`                  | Defines the data type            |
-| `required`, `unique`    | Validators                       |
-| `default`, `min`, `max` | Constraints                      |
-| `methods`, `statics`    | Add custom logic                 |
-| `virtuals`              | Computed fields                  |
-| `hooks`                 | Lifecycle middleware             |
-| `ObjectId` + `ref`      | Relationship between collections |
-
----
-
-## 🔹 1. **What are Headers?**
-
-**HTTP headers** are key-value pairs sent in requests and responses to pass **metadata** like:
-
-- Content-Type
-- Authorization tokens
-- Cookies
-- User-Agent
-- CORS permissions
-- Custom app-specific headers
-
----
-
-## 🔹 2. **Reading Request Headers in Express**
-
-You can read headers from the request using `req.headers`, `req.get()`, or `req.header()`:
-
-```js
-app.get("/test", (req, res) => {
-  console.log(req.headers); // All headers
-  const authHeader = req.get("Authorization"); // OR req.headers['authorization']
-  res.send("Check console");
-});
-```
-
-🔸 Header keys are **case-insensitive**.
-
----
-
-## 🔹 3. **Setting Response Headers in Express**
-
-Use `res.set()` or `res.header()` or `res.setHeader()`:
-
-```js
-app.get("/download", (req, res) => {
-  res.set("Content-Type", "application/json");
-  res.set("X-Powered-By", "ShubhamExpressAPI");
-  res.send({ msg: "Headers set" });
-});
-```
-
----
-
-## 🔹 4. **Common Headers You May Use**
-
-| Type     | Header                                                | Use Case                              |
-| -------- | ----------------------------------------------------- | ------------------------------------- |
-| CORS     | `Access-Control-Allow-Origin`                         | Allow frontend to access APIs         |
-| Auth     | `Authorization: Bearer xyz`                           | JWT or Basic Auth                     |
-| Content  | `Content-Type: application/json`                      | Tells server what format body is      |
-| Cookies  | `Cookie` / `Set-Cookie`                               | Used for session/token authentication |
-| Security | `Strict-Transport-Security`, `X-Content-Type-Options` | Harden app from attacks               |
-| Caching  | `Cache-Control`, `ETag`                               | Manage browser caching                |
-| Custom   | `X-App-Version`, etc.                                 | For custom logic or version control   |
-
----
-
-## 🔹 5. **Send Custom Headers in Response**
-
-```js
-res.set({
-  "X-API-Version": "1.0",
-  "X-Auth-Required": "true",
-});
-```
-
----
-
-## 🔹 6. **Middleware for Header-Based Logic**
-
-You can create middleware to check headers:
-
-```js
-const checkAuthHeader = (req, res, next) => {
-  const token = req.get("Authorization");
-  if (!token) return res.status(401).json({ msg: "No token" });
-  // do more validation...
-  next();
-};
-
-app.use("/protected", checkAuthHeader);
-```
-
----
-
-## 🔹 7. **Security Headers Using Helmet (Best Practice)**
-
-```bash
-npm install helmet
-```
-
-```js
-const helmet = require("helmet");
-app.use(helmet()); // Automatically sets many security headers
-```
-
-✅ This adds:
-
-- `X-Frame-Options`
-- `Strict-Transport-Security`
-- `X-Content-Type-Options`
-- `Content-Security-Policy` (with config)
-
----
-
-## 🔹 8. **Setting Headers for File Download**
-
-```js
-app.get("/file", (req, res) => {
-  res.setHeader("Content-Disposition", "attachment; filename=info.txt");
-  res.send("Your download will start");
-});
-```
-
----
-
-## 🔹 9. **Sending Headers from React**
-
-```js
-axios.get("/protected", {
-  headers: {
-    Authorization: `Bearer ${token}`,
-    "X-Client": "ReactApp",
-  },
-});
-```
-
----
-
-## ✅ Summary
-
-| Operation           | Use                              |
-| ------------------- | -------------------------------- |
-| Read request header | `req.get("HeaderName")`          |
-| Set response header | `res.set("HeaderName", "value")` |
-| Security headers    | Use Helmet                       |
-| Auth check          | Middleware on headers            |
-| Cross-origin        | Set `Access-Control-*`           |
-
----
-
-## 🍪 What Are Cookies?
-
-**Cookies** are small pieces of data stored on the client (browser) and sent to the server with every HTTP request. They're commonly used to:
-
-- Store session IDs
-- Track user preferences
-- Handle login states
-- Store tokens or user info (lightweight)
-
----
-
-## ⚙️ How to Use Cookies in Express
-
-### Step 1: Install `cookie-parser`
-
-```bash
-npm install cookie-parser
-```
-
-### Step 2: Use it as middleware
-
-```js
-const express = require("express");
-const cookieParser = require("cookie-parser");
-
-const app = express();
-app.use(cookieParser());
-```
-
----
-
-## ✅ Set a Cookie
-
-```js
-app.get("/set-cookie", (req, res) => {
-  res.cookie("username", "Shubham", {
-    maxAge: 1000 * 60 * 60, // 1 hour
-    httpOnly: true, // Can’t be accessed via JS (prevents XSS)
-    secure: true, // Only sent over HTTPS
-    sameSite: "strict", // Prevent CSRF
-  });
-  res.send("Cookie has been set");
-});
-```
-
----
-
-## 📥 Read a Cookie
-
-```js
-app.get("/get-cookie", (req, res) => {
-  const username = req.cookies.username;
-  res.send(`Hello, ${username}`);
-});
-```
-
----
-
-## ❌ Clear a Cookie
-
-```js
-app.get("/clear-cookie", (req, res) => {
-  res.clearCookie("username");
-  res.send("Cookie cleared");
-});
-```
-
----
-
-## 🛡️ Why Use Cookies for Security?
-
-### 🔐 1. **Session Management**
-
-- Store a **session ID** in cookie
-- On the server, use that ID to retrieve session data
-
-> ✅ Use libraries like `express-session` for secure session management
-
----
-
-### 🔐 2. **Prevent XSS (Cross Site Scripting)**
-
-```js
-httpOnly: true;
-```
-
-> Ensures that malicious JS can't access cookies.
-
----
-
-### 🔐 3. **Prevent CSRF (Cross Site Request Forgery)**
-
-```js
-sameSite: "strict"; // or 'lax'
-```
-
-> Tells browser not to send cookies on cross-origin requests.
-
----
-
-### 🔐 4. **Secure Transmission**
-
-```js
-secure: true;
-```
-
-> Only send cookies via **HTTPS**.
-
----
-
-## ⚠️ Never Store Sensitive Info in Cookies
-
-Do **not** store:
-
-- Passwords
-- Tokens (unless encrypted)
-- Credit card numbers
-
-> Use cookies to store lightweight identifiers (like session IDs or signed JWTs).
-
----
-
-## 📦 Real-World Example: Session Authentication
-
-```js
-// Using cookie-parser + JWT
-const jwt = require("jsonwebtoken");
-
-app.post("/login", (req, res) => {
-  const user = { id: 1, username: "Shubham" };
-  const token = jwt.sign(user, "secret", { expiresIn: "1h" });
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    maxAge: 3600000,
-  });
-
-  res.send("Logged in");
-});
-```
-
----
-
-## 🧪 Debug Cookies
-
-In the browser:
-
-- DevTools → Application → Cookies
-
----
-
-## 🔍 Summary Table
-
-| Feature             | Code Option           | Purpose                 |
-| ------------------- | --------------------- | ----------------------- |
-| `httpOnly`          | `true`                | Prevent JS access (XSS) |
-| `secure`            | `true`                | Only send via HTTPS     |
-| `sameSite`          | `'strict'` or `'lax'` | Prevent CSRF            |
-| `maxAge`            | `in ms`               | Cookie expiration       |
-| `res.cookie()`      | Set cookie            |                         |
-| `res.clearCookie()` | Remove cookie         |                         |
-
----
-
-## 🔑 What is `express-session`?
-
-`express-session` is a middleware that stores session data on the server. Each user gets a unique session ID stored in a cookie (`connect.sid`). On future requests, the server uses that ID to retrieve the session.
-
----
-
-## 📦 1. Installation
-
-```bash
-npm install express-session
-```
-
----
-
-## ⚙️ 2. Basic Setup
-
-```js
-const express = require("express");
-const session = require("express-session");
-
-const app = express();
-
-// Middleware
-app.use(
-  session({
-    secret: "your_super_secret_key", // Used to sign the session ID cookie
-    resave: false, // Don’t save session if unmodified
-    saveUninitialized: false, // Don’t create session until something stored
-    cookie: {
-      httpOnly: true,
-      secure: false, // Set true in production (HTTPS)
-      maxAge: 1000 * 60 * 60, // 1 hour
-    },
-  })
-);
-```
-
----
-
-## ✅ 3. How It Works
-
-### Set data in session
-
-```js
-app.get("/login", (req, res) => {
-  req.session.user = {
-    id: 1,
-    username: "Shubham",
-  };
-  res.send("Session set!");
-});
-```
-
-### Access session data
-
-```js
-app.get("/profile", (req, res) => {
-  if (req.session.user) {
-    res.send(`Welcome ${req.session.user.username}`);
-  } else {
-    res.status(401).send("Unauthorized");
-  }
-});
-```
-
-### Destroy session (logout)
-
-```js
-app.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.send("Logout failed");
-    }
-    res.clearCookie("connect.sid"); // remove session ID from browser
-    res.send("Logged out");
-  });
-});
-```
-
----
-
-## 🔐 4. Session Security Best Practices
-
-| Option               | Why                                    |
-| -------------------- | -------------------------------------- |
-| `secret`             | Signs the cookie, preventing tampering |
-| `httpOnly: true`     | Prevent JS access (XSS)                |
-| `secure: true`       | Send cookie only over HTTPS            |
-| `sameSite: 'strict'` | Mitigate CSRF attacks                  |
-| `maxAge`             | Auto-logout after inactivity           |
-
-🔐 **Production Config:**
-
-```js
-cookie: {
-  httpOnly: true,
-  secure: true,         // Set to true on HTTPS
-  sameSite: 'strict',
-  maxAge: 1000 * 60 * 60
-}
-```
-
----
-
-## 🧠 5. MemoryStore Warning
-
-> `express-session` uses in-memory storage by default — not recommended for production due to memory leaks and no persistence.
-
-✅ **Use a store like:**
-
-- `connect-mongo` (MongoDB)
-- `connect-redis` (Redis)
-- `connect-sqlite3`, `connect-pg-simple`, etc.
-
----
-
-## 🧰 6. MongoDB Store Example (using `connect-mongo`)
-
-```bash
-npm install connect-mongo
-```
-
-```js
-const MongoStore = require("connect-mongo");
-
-app.use(
-  session({
-    secret: "your_super_secret_key",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: "mongodb://localhost:27017/your-db",
-      ttl: 60 * 60, // 1 hour
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: true,
-      maxAge: 1000 * 60 * 60,
-    },
-  })
-);
-```
-
----
-
-## 🧪 7. Session Flow Summary
-
-1. First request hits `/login`, session created and stored.
-2. Cookie `connect.sid` is sent to browser.
-3. Subsequent requests send that cookie.
-4. Express uses the ID to fetch session data.
-5. Session can be updated/destroyed anytime.
-
----
-
-## 📁 Session Storage Example (in-memory)
-
-```js
-req.session = {
-  id: "abc123",
-  user: {
-    id: 1,
-    name: "Shubham",
-  },
-  isAuthenticated: true,
-};
-```
-
----
-
-## 🔍 DevTools Debugging
-
-- In Chrome DevTools → Application → Cookies → `connect.sid`
-
----
-
-## ✅ Real World Uses
-
-- **Login systems**
-- **Cart systems** (store items in `req.session.cart`)
-- **Flash messages**
-- **Multi-step forms**
-
----
-
-## 🧠 1. What is Session-Based Authentication?
-
-- When a user logs in, the server stores their login info in a **session (in memory or DB)**.
-- The server sends a **session ID (cookie)** to the browser.
-- On each request, the cookie is sent back → used to identify the user.
-- Unlike JWT (stateless), sessions are **stateful** and stored **on the server**.
-
----
-
-## 🧱 2. Project Setup
-
-```bash
-npm init -y
-npm install express mongoose express-session connect-mongo bcryptjs dotenv
-```
-
-### File structure:
-
-```
-project/
-├── models/User.js
-├── routes/auth.js
-├── app.js
-└── .env
-```
-
----
-
-## 🗄️ 3. Mongoose User Model (`models/User.js`)
-
-```js
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-});
-
-// Hash password before saving
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
-
-module.exports = mongoose.model("User", userSchema);
-```
-
----
-
-## 🌐 4. Express App (`app.js`)
-
-```js
-const express = require("express");
-const mongoose = require("mongoose");
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
-const authRoutes = require("./routes/auth");
-require("dotenv").config();
-
-const app = express();
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// Session config
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
-    cookie: {
-      httpOnly: true,
-      secure: false, // Set true in production (HTTPS)
-      maxAge: 1000 * 60 * 60 * 1, // 1 hour
-    },
-  })
-);
-
-// Routes
-app.use("/auth", authRoutes);
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() =>
-    app.listen(3000, () => console.log("Running on http://localhost:3000"))
-  )
-  .catch(console.error);
-```
-
----
-
-## 🔐 5. Auth Routes (`routes/auth.js`)
-
-```js
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-const router = express.Router();
-
-// Register
-router.post("/register", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = new User({ username, password });
-    await user.save();
-    res.status(201).send("Registered successfully");
-  } catch (err) {
-    res.status(400).send("Error: " + err.message);
-  }
-});
-
-// Login
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
-    return res.status(401).send("Invalid credentials");
-  }
-
-  req.session.userId = user._id; // Save session
-  res.send("Login successful");
-});
-
-// Logout
-router.get("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) return res.status(500).send("Logout error");
-    res.clearCookie("connect.sid");
-    res.send("Logged out");
-  });
-});
-
-// Protected route
-router.get("/profile", async (req, res) => {
-  if (!req.session.userId) return res.status(401).send("Login first");
-  const user = await User.findById(req.session.userId).select("-password");
-  res.send(user);
-});
-
-module.exports = router;
-```
-
----
-
-## 🔐 6. Middleware to Protect Routes
-
-```js
-const isAuthenticated = (req, res, next) => {
-  if (req.session.userId) return next();
-  return res.status(401).send("Access denied");
-};
-```
-
----
-
-## 🛡️ 7. Security Best Practices
-
-| Best Practice                    | Why Important                             |
-| -------------------------------- | ----------------------------------------- |
-| Use HTTPS in production          | To secure cookies & session data          |
-| Set `httpOnly` and `secure`      | Prevents client-side JS access to cookies |
-| Store session in DB (not memory) | Safer and scalable                        |
-| Rotate session secret frequently | Avoid hijacking                           |
-| Use `express-rate-limit`         | To avoid brute-force login attacks        |
-
----
-
-## ✅ Sample `.env`
-
-```env
-MONGO_URI=mongodb://localhost:27017/sessions_demo
-SESSION_SECRET=mySuperSecretKey
-```
-
----
-
-## 🧪 Test with Postman or Browser
-
-- **POST /auth/register** `{ "username": "shubham", "password": "123456" }`
-- **POST /auth/login**
-- **GET /auth/profile** — protected
-- **GET /auth/logout**
-
----
-
-## 🔐 Why JWT for Authentication?
-
-JWT is a **stateless**, secure way to authenticate users without server-side sessions.
-
-- ✅ Self-contained token with user info (like ID)
-- ✅ Sent with every request via headers
-- ✅ Stateless: No need to store session data on the server
-
----
-
-## 🏗️ Project Structure
-
-```
-project/
-├── server.js
-├── routes/
-│   └── auth.js
-├── controllers/
-│   └── authController.js
-├── middlewares/
-│   └── authMiddleware.js
-├── models/
-│   └── User.js
-├── config/
-│   └── db.js
-└── .env
-```
-
----
-
-## 🧱 Step-by-Step Setup
-
----
-
-### ✅ Step 1: Install Required Packages
-
-```bash
-npm install express mongoose dotenv bcryptjs jsonwebtoken cookie-parser
-```
-
----
-
-### ✅ Step 2: Environment Setup (`.env`)
-
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=1d
-```
-
----
-
-### ✅ Step 3: Connect to MongoDB (`config/db.js`)
+## 🧩 Mongoose: Connecting to MongoDB
 
 ```js
 const mongoose = require("mongoose");
@@ -3080,8 +1937,8 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("MongoDB Connected");
-  } catch (error) {
-    console.error(error.message);
+  } catch (err) {
+    console.error(err.message);
     process.exit(1);
   }
 };
@@ -3091,643 +1948,1182 @@ module.exports = connectDB;
 
 ---
 
-### ✅ Step 4: Create User Schema (`models/User.js`)
+## 🧱 Defining a Schema
+
+Schemas define the **structure and rules** for documents.
+
+```js
+const { Schema } = require("mongoose");
+
+const userSchema = new Schema({
+  name: {
+    type: String,
+    required: [true, "Name is required"], // Custom error message
+    minlength: [3, "Name must be at least 3 characters"],
+    maxlength: [50, "Name must be at most 50 characters"],
+    trim: true, // Removes leading/trailing whitespaces
+  },
+  email: {
+    type: String,
+    required: [true, "Email is required"],
+    unique: true, // Creates a unique index
+    lowercase: true, // Automatically converts to lowercase
+    match: [
+      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+      "Please fill a valid email address",
+    ],
+  },
+  age: {
+    type: Number,
+    min: [18, "Minimum age is 18"],
+    max: [65, "Maximum age is 65"],
+    validate: {
+      validator: Number.isInteger,
+      message: "Age must be an integer",
+    },
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
+  role: {
+    type: String,
+    enum: {
+      values: ["user", "admin", "moderator"],
+      message: "{VALUE} is not a valid role",
+    },
+    default: "user",
+  },
+  phone: {
+    type: String,
+    validate: {
+      validator: function (v) {
+        return /^(\+91)?[6-9]\d{9}$/.test(v);
+      },
+      message: (props) => `${props.value} is not a valid Indian phone number`,
+    },
+    required: [true, "Phone number is required"],
+  },
+  password: {
+    type: String,
+    required: [true, "Password is required"],
+    minlength: [6, "Password must be at least 6 characters long"],
+    select: false, // Will not be selected by default in queries
+  },
+  confirmPassword: {
+    type: String,
+    required: true,
+    validate: {
+      validator: function (val) {
+        // `this` only works on `save` and `create`, not update
+        return val === this.password;
+      },
+      message: "Passwords do not match",
+    },
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    immutable: true, // Field cannot be changed once set
+  },
+});
+```
+
+---
+
+## ✅ Summary of Validations Used
+
+| Validation               | Field(s)                          | Description                       |
+| ------------------------ | --------------------------------- | --------------------------------- |
+| `required`               | All major fields                  | Ensures value is provided         |
+| `minlength`, `maxlength` | `name`, `password`                | Restricts string length           |
+| `min`, `max`             | `age`                             | Restricts number range            |
+| `match`                  | `email`                           | Validates against regex           |
+| `enum`                   | `role`                            | Restricts to allowed values       |
+| `validate` (custom)      | `age`, `phone`, `confirmPassword` | Custom logic                      |
+| `lowercase`              | `email`                           | Auto-lowercases                   |
+| `trim`                   | `name`                            | Removes extra space               |
+| `select: false`          | `password`                        | Hides field from query results    |
+| `immutable`              | `createdAt`                       | Locks the value on creation       |
+| `unique`                 | `email`                           | Creates a unique index in MongoDB |
+
+---
+
+## 🏗️ Creating a Model
+
+A model is a **constructor compiled from a schema**.
+
+```js
+const User = mongoose.model("User", userSchema);
+```
+
+- `User` is the model name (auto-pluralized to `users` in MongoDB)
+- Used to perform CRUD operations
+
+---
+
+## 🟢 Insert (Create) Documents in Depth
+
+### ✅ 1. Using `.create()`
+
+```js
+const newUser = await User.create({
+  name: "Shubham",
+  email: "shubham@example.com",
+  age: 27,
+});
+```
+
+- Returns a promise
+- Automatically runs validations and middleware
+
+### ✅ 2. Using `.save()` on a document instance
+
+```js
+const user = new User({
+  name: "Shubham",
+  email: "shubham@example.com",
+  age: 27,
+});
+
+await user.save();
+```
+
+- Gives more control
+- Allows mutation before saving
+
+---
+
+## 🛠️ Advanced Create Use Cases
+
+### ➤ Validation Errors
+
+```js
+try {
+  await User.create({ name: "Missing Email" });
+} catch (err) {
+  console.log(err.errors.email.message); // Required validation error
+}
+```
+
+### ➤ Inserting Multiple Documents
+
+```js
+await User.insertMany([
+  { name: "User1", email: "u1@example.com" },
+  { name: "User2", email: "u2@example.com" },
+]);
+```
+
+> `insertMany` is faster and skips some middleware unless explicitly enabled.
+
+---
+
+## 🎯 Middleware (Hooks) for Create
+
+```js
+userSchema.pre("save", function (next) {
+  console.log("Before saving:", this.name);
+  next();
+});
+
+userSchema.post("save", function (doc, next) {
+  console.log("Saved:", doc.name);
+  next();
+});
+```
+
+---
+
+Perfect! Here's **Part 2** of the complete in-depth Mongoose guide, including **Read, Update, Delete**, and more. Best practices and real-world patterns are highlighted throughout.
+
+---
+
+## 📖 READ: Fetching Data
+
+### ✅ 1. `find()`: Fetch multiple documents
+
+```js
+const users = await User.find({ isAdmin: false });
+```
+
+- Returns an array
+- Pass empty `{}` to fetch all
+
+---
+
+### ✅ 2. `findOne()`: Fetch single document
+
+```js
+const user = await User.findOne({ email: "shubham@example.com" });
+```
+
+- Returns the first match or `null`
+
+---
+
+### ✅ 3. `findById()`: Find by `_id`
+
+```js
+const user = await User.findById("64d4cabc123abc123abc1234");
+```
+
+- `_id` is a unique ObjectId
+
+---
+
+### 🔍 Projection (Include/Exclude Fields)
+
+```js
+User.find({}, "name email"); // include name, email only
+User.find({}, { password: 0 }); // exclude password
+```
+
+---
+
+### 🔎 Filtering with Query Operators
+
+```js
+User.find({ age: { $gt: 25, $lte: 40 } });
+```
+
+Operators like `$gt`, `$gte`, `$lt`, `$in`, `$or`, `$regex`, etc.
+
+---
+
+## 🧑‍💻 Real-World Pattern: Pagination
+
+```js
+const page = 1;
+const limit = 10;
+
+const users = await User.find()
+  .skip((page - 1) * limit)
+  .limit(limit);
+```
+
+---
+
+## 🔄 UPDATE
+
+### ✅ 1. `updateOne()`
+
+```js
+await User.updateOne({ email: "shubham@example.com" }, { age: 30 });
+```
+
+---
+
+### ✅ 2. `updateMany()`
+
+```js
+await User.updateMany({ isAdmin: false }, { isAdmin: true });
+```
+
+---
+
+### ✅ 3. `findByIdAndUpdate()`
+
+```js
+await User.findByIdAndUpdate(
+  "64d4cabc123abc123abc1234",
+  { name: "Updated Name" },
+  { new: true, runValidators: true }
+);
+```
+
+> `new: true` → returns updated doc
+> `runValidators: true` → applies schema validation on update
+
+---
+
+## ❌ DELETE
+
+### ✅ 1. `deleteOne()`
+
+```js
+await User.deleteOne({ email: "shubham@example.com" });
+```
+
+---
+
+### ✅ 2. `deleteMany()`
+
+```js
+await User.deleteMany({ isAdmin: false });
+```
+
+---
+
+### ✅ 3. `findByIdAndDelete()`
+
+```js
+await User.findByIdAndDelete("64d4cabc123abc123abc1234");
+```
+
+---
+
+## 📈 INDEXING
+
+### ✅ Declaring Index
+
+```js
+const productSchema = new mongoose.Schema({
+  name: String,
+  category: String,
+  price: Number,
+});
+
+productSchema.index({ category: 1 }); // ascending index
+```
+
+### ✅ Compound Index
+
+```js
+productSchema.index({ category: 1, price: -1 });
+```
+
+> Improves query speed. Always match index order in queries.
+
+---
+
+## 🧪 VIRTUALS
+
+Used to define **computed fields** not stored in DB.
+
+```js
+userSchema.virtual("fullName").get(function () {
+  return this.name + " (Admin: " + this.isAdmin + ")";
+});
+
+const user = await User.findOne();
+console.log(user.fullName); // Virtual field
+```
+
+---
+
+## 🧩 POPULATE (Relations)
+
+```js
+// Post schema
+const postSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  author: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+});
+
+// Get post with author data
+const posts = await Post.find().populate("author", "name email");
+```
+
+---
+
+## 📌 Best Practices
+
+| Practice                                                         | Why                                           |
+| ---------------------------------------------------------------- | --------------------------------------------- |
+| Always validate input                                            | Prevent malformed data                        |
+| Use `lean()` for read-only queries                               | Returns plain JS object, improves performance |
+| Use pagination with `.skip()` and `.limit()`                     | Handles large datasets                        |
+| Avoid `.findOne().then(...).catch(...)` mix with `async/await`   | Stick to one async style                      |
+| Index fields used in search/sort                                 | Faster reads                                  |
+| Avoid storing passwords in plain text                            | Always hash them                              |
+| Use `.toJSON()` or `.toObject()` with `transform` to hide fields | Remove private info from response             |
+| Separate Mongoose connection logic from route logic              | Better modularity                             |
+| Use `.create()` for one or many inserts                          | Auto-handles validation                       |
+| Use Mongoose transactions for multi-step operations              | Ensures atomicity                             |
+
+---
+
+## 🚀 Real-World Example: Auth User Model
 
 ```js
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  name: { type: String, required: true },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    match: /^\S+@\S+\.\S+$/,
+  },
+  password: { type: String, required: true, minlength: 6 },
 });
+
+// Hash before saving
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+// Method to check password
+userSchema.methods.comparePassword = async function (candidate) {
+  return bcrypt.compare(candidate, this.password);
+};
 
 module.exports = mongoose.model("User", userSchema);
 ```
 
 ---
 
-### ✅ Step 5: Auth Controller (`controllers/authController.js`)
+## 🔚 Summary
+
+| Topic          | Methods                                              |
+| -------------- | ---------------------------------------------------- |
+| Connect        | `mongoose.connect()`                                 |
+| Create         | `.create()`, `.save()`, `insertMany()`               |
+| Read           | `.find()`, `.findOne()`, `.findById()`               |
+| Update         | `.updateOne()`, `.findByIdAndUpdate()`               |
+| Delete         | `.deleteOne()`, `.findByIdAndDelete()`               |
+| Indexing       | `schema.index()`                                     |
+| Virtuals       | `schema.virtual()`                                   |
+| Relations      | `populate()`                                         |
+| Best Practices | Indexing, validations, pagination, modular structure |
+
+---
+
+# 🔄 1. Aggregation Pipelines in Mongoose (Advanced MongoDB Queries)
+
+### ✅ What is Aggregation?
+
+Aggregation is used to **process data records** and **return computed results**, like SQL `GROUP BY`, filters, projections, etc.
+
+---
+
+### 🔧 Basic Syntax
 
 ```js
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-
-// Register
-exports.register = async (req, res) => {
-  const { username, email, password } = req.body;
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
-    res.status(201).json({ message: "User registered", userId: newUser._id });
-  } catch (error) {
-    res.status(500).json({ error: "User registration failed" });
-  }
-};
-
-// Login
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ error: "User not found" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid password" });
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
-
-    // Optionally set as HTTP-only cookie
-    res
-      .cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000,
-      })
-      .json({ message: "Login successful", token });
-  } catch (error) {
-    res.status(500).json({ error: "Login failed" });
-  }
-};
+Model.aggregate([
+  { $match: { isAdmin: true } }, // Filter
+  { $group: { _id: "$role", count: { $sum: 1 } } }, // Grouping
+  { $sort: { count: -1 } }, // Sort descending
+]);
 ```
 
 ---
 
-### ✅ Step 6: Middleware to Protect Routes (`middlewares/authMiddleware.js`)
+### 🧠 Real-World Example: Group Users by Role
 
 ```js
-const jwt = require("jsonwebtoken");
+const stats = await User.aggregate([
+  { $group: { _id: "$role", totalUsers: { $sum: 1 } } },
+]);
+```
 
-exports.verifyToken = (req, res, next) => {
-  const token = req.cookies.token || req.headers["authorization"];
-  if (!token) return res.status(401).json({ error: "Access denied" });
+---
 
+### 🔍 Common Operators
+
+| Stage             | Description                      |
+| ----------------- | -------------------------------- |
+| `$match`          | Filter documents                 |
+| `$group`          | Group by fields and aggregate    |
+| `$sort`           | Sort results                     |
+| `$project`        | Shape the output (fields/values) |
+| `$lookup`         | Perform joins                    |
+| `$unwind`         | Deconstruct arrays               |
+| `$limit`, `$skip` | Pagination                       |
+
+---
+
+### 🔄 Lookup (Join Example)
+
+```js
+Post.aggregate([
+  {
+    $lookup: {
+      from: "users", // Target collection
+      localField: "author", // Field in Post
+      foreignField: "_id", // Field in User
+      as: "authorDetails",
+    },
+  },
+  { $unwind: "$authorDetails" }, // optional if you want flat object
+]);
+```
+
+---
+
+# 💳 2. Mongoose Transactions
+
+### ✅ What is a Transaction?
+
+A **transaction** ensures multiple operations happen together or not at all — like transferring money between accounts.
+
+---
+
+### 🔐 Setup: MongoDB must be running as a **replica set** (even if just one node):
+
+```bash
+mongod --replSet rs0 --port 27017
+```
+
+Then initiate:
+
+```bash
+rs.initiate()
+```
+
+---
+
+### 🧪 Transaction Example (Money Transfer)
+
+```js
+const session = await mongoose.startSession();
+
+try {
+  session.startTransaction();
+
+  const sender = await User.findById(senderId).session(session);
+  const receiver = await User.findById(receiverId).session(session);
+
+  if (sender.balance < amount) throw new Error("Insufficient funds");
+
+  sender.balance -= amount;
+  receiver.balance += amount;
+
+  await sender.save({ session });
+  await receiver.save({ session });
+
+  await session.commitTransaction();
+  console.log("✅ Transaction committed");
+} catch (err) {
+  await session.abortTransaction();
+  console.error("❌ Transaction aborted:", err.message);
+} finally {
+  session.endSession();
+}
+```
+
+---
+
+### ✅ Best Practices
+
+- Always `commitTransaction()` or `abortTransaction()`
+- Use sessions in all reads/writes
+- Catch errors and log them
+
+---
+
+# 🧩 3. Mongoose Plugins
+
+Plugins let you **re-use logic across schemas**. Like mixins for your models.
+
+---
+
+### 🔧 Example: `timestamps` plugin (built-in)
+
+```js
+const userSchema = new mongoose.Schema({ name: String }, { timestamps: true });
+```
+
+Creates:
+
+```js
+{
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+---
+
+### 🧠 Custom Plugin Example (mask email)
+
+```js
+function maskEmailPlugin(schema, options) {
+  schema.methods.maskEmail = function () {
+    const [user, domain] = this.email.split("@");
+    return user[0] + "****@" + domain;
+  };
+}
+
+userSchema.plugin(maskEmailPlugin);
+```
+
+Then in usage:
+
+```js
+const user = await User.findById(id);
+console.log(user.maskEmail()); // s****@gmail.com
+```
+
+---
+
+### ✅ Popular Community Plugins
+
+| Plugin                                                                               | Purpose                                  |
+| ------------------------------------------------------------------------------------ | ---------------------------------------- |
+| [mongoose-unique-validator](https://www.npmjs.com/package/mongoose-unique-validator) | Better error messages for `unique: true` |
+| [mongoose-autopopulate](https://www.npmjs.com/package/mongoose-autopopulate)         | Auto-populate refs                       |
+| [mongoose-paginate-v2](https://www.npmjs.com/package/mongoose-paginate-v2)           | Simplified pagination                    |
+| [mongoose-soft-delete](https://www.npmjs.com/package/mongoose-delete)                | Add soft-delete (isDeleted flag) support |
+
+---
+
+## 🚀 Real-World Project Use
+
+Let’s say you're building an **E-commerce app**, you’ll need:
+
+- Aggregation for dashboard analytics
+- Transactions for order and payment
+- Plugins for audit logs or masking
+- Virtuals for computed price with tax
+- Indexes on `product.slug` or `user.email` for quick lookups
+
+---
+
+**production-ready Mongoose Boilerplate** structure that includes:
+
+- ✅ Advanced Mongoose Features: Transactions, Aggregation, Plugins, Virtuals, Indexes
+- 🔒 Modular Architecture: Models, Routes, Controllers, Services
+- 🚀 Best Practices: Separation of concerns, validations, reusability, plugins
+
+---
+
+## 📁 Folder Structure
+
+```
+mongoose-app/
+│
+├── config/
+│   └── db.js                 # Mongoose connection
+│
+├── models/
+│   ├── user.model.js        # User schema with virtuals, indexes
+│   └── order.model.js       # Order schema with transaction support
+│
+├── plugins/
+│   └── maskEmail.js         # Custom plugin
+│
+├── controllers/
+│   └── user.controller.js   # Handles API logic
+│
+├── services/
+│   └── user.service.js      # Handles DB logic and aggregation
+│
+├── routes/
+│   └── user.routes.js       # Express routes
+│
+├── utils/
+│   └── validateObjectId.js  # Middleware for ObjectId check
+│
+├── .env
+├── server.js                # Entry point
+└── package.json
+```
+
+---
+
+## 🧠 1. `config/db.js` — MongoDB Connection
+
+```js
+const mongoose = require("mongoose");
+
+const connectDB = async () => {
   try {
-    const decoded = jwt.verify(
-      token.replace("Bearer ", ""),
-      process.env.JWT_SECRET
-    );
-    req.user = decoded;
-    next();
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("✅ MongoDB Connected");
   } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
+    console.error("❌ DB Connection Error:", err.message);
+    process.exit(1);
+  }
+};
+
+module.exports = connectDB;
+```
+
+---
+
+## 🧱 2. `models/user.model.js` — Schema with All Features
+
+```js
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const maskEmailPlugin = require("../plugins/maskEmail");
+
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      minlength: 3,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      match: [/.+@.+\..+/, "Invalid email"],
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+      select: false,
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+      index: true,
+    },
+    balance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+  },
+  { timestamps: true }
+);
+
+// 🔐 Hash password before saving
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
+
+// 👤 Add custom instance method
+userSchema.methods.comparePassword = function (candidate) {
+  return bcrypt.compare(candidate, this.password);
+};
+
+// 🧮 Virtual field: ID + Role
+userSchema.virtual("profile").get(function () {
+  return `${this.name} (${this.role})`;
+});
+
+// 🔌 Custom plugin: mask email
+userSchema.plugin(maskEmailPlugin);
+
+module.exports = mongoose.model("User", userSchema);
+```
+
+---
+
+## 🧩 3. `plugins/maskEmail.js`
+
+```js
+module.exports = function (schema) {
+  schema.methods.maskEmail = function () {
+    const [u, d] = this.email.split("@");
+    return u[0] + "****@" + d;
+  };
+};
+```
+
+---
+
+## 📦 4. `models/order.model.js` — With Transaction Use
+
+```js
+const mongoose = require("mongoose");
+
+const orderSchema = new mongoose.Schema({
+  buyer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  total: { type: Number, required: true },
+  status: {
+    type: String,
+    enum: ["pending", "paid", "shipped"],
+    default: "pending",
+  },
+});
+
+module.exports = mongoose.model("Order", orderSchema);
+```
+
+---
+
+## 🧠 5. `services/user.service.js` — Aggregation, Transactions
+
+```js
+const User = require("../models/user.model");
+const Order = require("../models/order.model");
+const mongoose = require("mongoose");
+
+exports.transferMoney = async (senderId, receiverId, amount) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const sender = await User.findById(senderId).session(session);
+    const receiver = await User.findById(receiverId).session(session);
+
+    if (sender.balance < amount) throw new Error("Insufficient balance");
+
+    sender.balance -= amount;
+    receiver.balance += amount;
+
+    await sender.save({ session });
+    await receiver.save({ session });
+
+    await session.commitTransaction();
+    return { success: true };
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
+};
+
+exports.getStatsByRole = async () => {
+  return User.aggregate([
+    { $group: { _id: "$role", total: { $sum: 1 } } },
+    { $sort: { total: -1 } },
+  ]);
+};
+```
+
+---
+
+## 📡 6. `controllers/user.controller.js`
+
+```js
+const UserService = require("../services/user.service");
+
+exports.getRoleStats = async (req, res) => {
+  try {
+    const stats = await UserService.getStatsByRole();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.transfer = async (req, res) => {
+  const { senderId, receiverId, amount } = req.body;
+
+  try {
+    await UserService.transferMoney(senderId, receiverId, amount);
+    res.json({ message: "Transfer successful" });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 };
 ```
 
 ---
 
-### ✅ Step 7: Auth Routes (`routes/auth.js`)
+## 🛣️ 7. `routes/user.routes.js`
 
 ```js
 const express = require("express");
 const router = express.Router();
-const { register, login } = require("../controllers/authController");
-const { verifyToken } = require("../middlewares/authMiddleware");
+const userController = require("../controllers/user.controller");
 
-router.post("/register", register);
-router.post("/login", login);
-
-// Protected Route
-router.get("/me", verifyToken, (req, res) => {
-  res.json({ message: "Protected route accessed", user: req.user });
-});
+router.post("/transfer", userController.transfer);
+router.get("/stats", userController.getRoleStats);
 
 module.exports = router;
 ```
 
 ---
 
-### ✅ Step 8: Main Server File (`server.js`)
+## 🚀 8. `server.js`
 
 ```js
 require("dotenv").config();
 const express = require("express");
-const app = express();
-const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 
+const app = express();
 app.use(express.json());
-app.use(cookieParser());
+
+// Routes
+app.use("/api/users", require("./routes/user.routes"));
 
 connectDB();
-
-app.use("/api/auth", require("./routes/auth"));
-
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on port ${process.env.PORT}`)
-);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 ```
 
 ---
 
-## 🔐 Security Best Practices
+## ✅ 9. `.env`
 
-| Practice                                                 | Why                                   |
-| -------------------------------------------------------- | ------------------------------------- |
-| ✅ `httpOnly` cookies                                    | Prevents JavaScript access (XSS-safe) |
-| ✅ Use `secure: true` in production                      | Cookie only over HTTPS                |
-| ✅ Short expiry (`1d`) + refresh                         | Limits damage if token is stolen      |
-| ✅ Store token in `Authorization` header for mobile APIs | More flexible for clients             |
-
----
-
-## ✅ Final API Example
-
-- `POST /api/auth/register` — Register new user
-- `POST /api/auth/login` — Login and receive JWT
-- `GET /api/auth/me` — Protected route (need JWT)
-
----
-
-## ✅ 1. **Pass JWT in Headers (React → Express)**
-
-### 🔸 Using `fetch`:
-
-```js
-const token = localStorage.getItem("accessToken");
-
-fetch("http://localhost:5000/api/user", {
-  method: "GET",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-})
-  .then((res) => res.json())
-  .then((data) => console.log(data));
+```
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/mongoose-boilerplate
 ```
 
 ---
 
-### 🔸 Using `axios`:
+## ✅ 10. `package.json` Dependencies
 
-```js
-import axios from "axios";
-
-const token = localStorage.getItem("accessToken");
-
-axios
-  .get("http://localhost:5000/api/user", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-  .then((res) => console.log(res.data))
-  .catch((err) => console.error(err));
-```
-
----
-
-## ✅ 2. **Refresh Token Flow**
-
-You typically store:
-
-- `accessToken` → Short-lived (15 min)
-- `refreshToken` → Long-lived (7 days)
-
-### ⛓️ Step-by-step:
-
-#### Backend (Express):
-
-- On login, send both tokens.
-- Save `refreshToken` in HTTP-only cookie.
-- Protect routes with `accessToken`.
-- Add `/refresh` route to issue new accessToken when expired.
-
-#### Frontend:
-
-```js
-// Example: auto-refresh on 401
-axios.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    if (err.response.status === 401 && !err.config._retry) {
-      err.config._retry = true;
-      const res = await axios.post(
-        "/auth/refresh",
-        {},
-        { withCredentials: true }
-      );
-
-      localStorage.setItem("accessToken", res.data.accessToken);
-      err.config.headers["Authorization"] = `Bearer ${res.data.accessToken}`;
-      return axios(err.config);
-    }
-    return Promise.reject(err);
+```json
+{
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.4.0"
   }
-);
-```
-
----
-
-## ✅ 3. **Logout**
-
-### Frontend:
-
-```js
-const handleLogout = async () => {
-  await axios.post("/auth/logout", {}, { withCredentials: true });
-  localStorage.removeItem("accessToken");
-  window.location.href = "/login";
-};
-```
-
-### Backend:
-
-```js
-app.post("/auth/logout", (req, res) => {
-  res.clearCookie("refreshToken", { httpOnly: true });
-  res.json({ message: "Logged out" });
-});
-```
-
----
-
-## ✅ 4. **Role-Based Authentication**
-
-### Backend:
-
-#### Middleware:
-
-```js
-const authorizeRole = (...roles) => {
-  return (req, res, next) => {
-    const user = req.user; // from jwt verification
-    if (!roles.includes(user.role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-    next();
-  };
-};
-```
-
-#### Usage:
-
-```js
-app.get("/admin", verifyToken, authorizeRole("admin"), (req, res) => {
-  res.json({ message: "Welcome Admin" });
-});
-```
-
----
-
-### Frontend Example:
-
-```js
-const user = JSON.parse(localStorage.getItem("user"));
-if (user?.role === "admin") {
-  // Show admin routes
 }
 ```
 
 ---
 
-## 🔐 Summary
+## 📌 Features Covered
 
-| Feature       | Method                                        |
-| ------------- | --------------------------------------------- |
-| Pass token    | Axios/Fetch → `Authorization: Bearer <token>` |
-| Refresh token | HTTP-only cookie + `/auth/refresh`            |
-| Logout        | `clearCookie()` + clear localStorage          |
-| Role-based    | Middleware + protected frontend routes        |
-
----
-
-## ⚙️ Overall Flow
-
-1. On **login**, server sets:
-   - `accessToken` in memory or response body (optional)
-   - `refreshToken` in a **`HttpOnly`**, **`Secure`** cookie
-2. React does **not manually pass the token** — browser does it automatically.
-3. On **protected routes**, token is verified server-side.
-4. If **access token expires**, send request to `/refresh` route → get new token.
-5. On **logout**, clear the cookie and token.
+| Feature           | Implemented                             |
+| ----------------- | --------------------------------------- |
+| Connect + Env     | ✅ `db.js` + `.env`                     |
+| Advanced Schema   | ✅ Custom validators, virtuals, plugins |
+| Indexes           | ✅ On role field                        |
+| Aggregation       | ✅ User role grouping                   |
+| Transactions      | ✅ Money transfer                       |
+| Plugins           | ✅ Custom `maskEmail` plugin            |
+| Modular Structure | ✅ All logic split cleanly              |
 
 ---
 
-## 🛡️ 1. Login → Set `HttpOnly` Refresh Token Cookie
+# **in-depth yet concise breakdown** of **modern authentication & authorization mechanisms**
 
-### 🔹 Backend (`Express.js`):
+## 🔐 1. JWT-Based Authentication (Stateless)
+
+### 🔧 Backend (Express + JWT)
 
 ```js
-// Login Route
-app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
+// auth.controller.js
+const jwt = require("jsonwebtoken");
+const SECRET = "shhh";
 
-  const user = await User.findOne({ email });
-  const valid = user && (await bcrypt.compare(password, user.password));
-  if (!valid) return res.status(401).json({ msg: "Invalid credentials" });
+exports.login = (req, res) => {
+  const { username, password } = req.body;
+  // Validate from DB
+  const user = { id: 1, username, role: "admin" };
+  const token = jwt.sign(user, SECRET, { expiresIn: "15m" });
+  const refreshToken = jwt.sign(user, SECRET, { expiresIn: "7d" });
 
-  const accessToken = jwt.sign(
-    { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "15m" }
-  );
-  const refreshToken = jwt.sign({ id: user._id }, process.env.REFRESH_SECRET, {
-    expiresIn: "7d",
-  });
+  res.cookie("token", token, { httpOnly: true });
+  res.cookie("refresh", refreshToken, { httpOnly: true });
+  res.json({ message: "Login successful" });
+};
 
-  res
-    .cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true, // HTTPS only
-      sameSite: "Strict",
-      path: "/api/refresh",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
-    .json({ accessToken, user: { id: user._id, role: user.role } });
-});
+// middleware.js
+exports.authenticate = (req, res, next) => {
+  const token = req.cookies.token;
+  try {
+    const user = jwt.verify(token, SECRET);
+    req.user = user;
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
 ```
 
----
-
-## 🌐 2. React Login Request (No Token Handling Needed)
+### 🧑‍💻 Frontend (React)
 
 ```js
-// Login API call from React using Axios or Fetch
+// login.jsx
 await axios.post(
-  "https://your-backend.com/api/login",
-  { email, password },
-  { withCredentials: true } // 👈 important for cookies
+  "/api/login",
+  { username, password },
+  { withCredentials: true }
 );
 ```
 
 ---
 
-## 🔐 3. Protect Routes in Express with `accessToken`
+## 🔁 2. JWT + Refresh Token Rotation
+
+### 🔧 Backend
 
 ```js
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
+// refresh.controller.js
+exports.refresh = (req, res) => {
+  const { refresh } = req.cookies;
+  try {
+    const user = jwt.verify(refresh, SECRET);
+    const newToken = jwt.sign(user, SECRET, { expiresIn: "15m" });
+    res.cookie("token", newToken, { httpOnly: true });
+    res.json({ message: "Token refreshed" });
+  } catch {
+    res.status(403).json({ message: "Refresh expired" });
+  }
 };
 ```
 
 ---
 
-## 🔁 4. Auto Refresh Access Token Using `/refresh`
-
-### 🔹 Backend:
+## 🧷 3. Session-Based Authentication (Server Memory/Redis)
 
 ```js
-app.post("/api/refresh", (req, res) => {
-  const token = req.cookies.refreshToken;
-  if (!token) return res.sendStatus(401);
+// session-setup.js
+const session = require("express-session");
+app.use(session({ secret: "xyz", resave: false, saveUninitialized: true }));
 
-  jwt.verify(token, process.env.REFRESH_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
+app.post("/login", (req, res) => {
+  // Validate user
+  req.session.user = { id: 1, name: "shubham" };
+  res.send("Logged in");
+});
 
-    const newAccessToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "15m",
-    });
-    res.json({ accessToken: newAccessToken });
-  });
+app.get("/dashboard", (req, res) => {
+  if (req.session.user) res.send("Welcome");
+  else res.status(401).send("Unauthorized");
 });
 ```
 
 ---
 
-### 🔹 React Axios Interceptor to Auto-Refresh:
+## 🔐 4. OAuth 2.0 + OpenID Connect (e.g., Google Login)
+
+### 🔧 Frontend
 
 ```js
-import axios from "axios";
+// google-login.jsx
+window.open("http://localhost:3000/auth/google", "_self");
+```
 
-const api = axios.create({
-  baseURL: "https://your-backend.com/api",
-  withCredentials: true,
-});
+### 🔧 Backend (Passport.js)
 
-api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
-      const res = await api.post("/refresh"); // cookie is auto sent
-      localStorage.setItem("accessToken", res.data.accessToken);
-      original.headers["Authorization"] = `Bearer ${res.data.accessToken}`;
-      return api(original);
+```js
+// google.strategy.js
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: "GOOGLE_ID",
+      clientSecret: "SECRET",
+      callbackURL: "/auth/google/callback",
+    },
+    (accessToken, refreshToken, profile, done) => {
+      return done(null, profile);
     }
-    return Promise.reject(err);
+  )
+);
+
+// routes
+app.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    // Generate your own JWT
+    const token = jwt.sign({ id: req.user.id }, SECRET);
+    res.cookie("token", token, { httpOnly: true }).redirect("/dashboard");
   }
 );
 ```
 
 ---
 
-## 🔓 5. Logout (Clear Cookie)
-
-### 🔹 Backend:
+## 👥 5. Role-Based Access Control (RBAC)
 
 ```js
-app.post("/api/logout", (req, res) => {
-  res.clearCookie("refreshToken", { path: "/api/refresh" });
-  res.status(200).json({ message: "Logged out" });
-});
-```
-
-### 🔹 React:
-
-```js
-await axios.post(
-  "https://your-backend.com/api/logout",
-  {},
-  { withCredentials: true }
-);
-localStorage.removeItem("accessToken");
-navigate("/login");
-```
-
----
-
-## 👮‍♂️ 6. Role-Based Auth (Backend)
-
-### Middleware:
-
-```js
-const authorize = (roles = []) => {
+// middleware.js
+exports.authorize = (roles = []) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Forbidden" });
-    }
+    if (!roles.includes(req.user.role))
+      return res.status(403).send("Forbidden");
     next();
   };
 };
-```
 
-### Usage:
-
-```js
-app.get("/admin", verifyToken, authorize(["admin"]), (req, res) => {
-  res.json({ msg: "Welcome Admin!" });
+// usage
+app.get("/admin", authenticate, authorize(["admin"]), (req, res) => {
+  res.send("Admin panel");
 });
 ```
 
 ---
 
-## 🔐 Security Best Practices
+## 🔐 6. Passwordless Auth (Magic Link)
 
-| Feature      | Recommended                                       |
-| ------------ | ------------------------------------------------- |
-| Cookies      | `HttpOnly`, `Secure`, `SameSite=Strict`           |
-| Token Expiry | Access: 15min, Refresh: 7d                        |
-| CORS         | Set `credentials: true` on both client and server |
-| HTTPS        | Required for `Secure` cookies                     |
+### High-level flow:
 
----
-
-## 🧪 Test From React (Fetch or Axios)
+1. User enters email.
+2. Backend sends secure link with signed token.
+3. User clicks → backend verifies → sets session/token.
 
 ```js
-const accessToken = localStorage.getItem("accessToken");
+// magic.controller.js
+const token = jwt.sign({ email }, SECRET, { expiresIn: "10m" });
+const link = `https://yourdomain.com/verify?token=${token}`;
+// Send link via email
 
-axios.get("/api/protected", {
-  headers: {
-    Authorization: `Bearer ${accessToken}`,
-  },
-  withCredentials: true,
+app.get("/verify", (req, res) => {
+  try {
+    const { email } = jwt.verify(req.query.token, SECRET);
+    // create session / token
+    res.send("Logged in with magic link");
+  } catch {
+    res.status(400).send("Invalid/expired link");
+  }
 });
 ```
 
 ---
 
-## ✅ Summary Flow:
+## 🛡 7. WebAuthn (Passwordless + Biometric Login)
 
-1. Login → Set `refreshToken` cookie, return `accessToken`
-2. Store `accessToken` in localStorage or memory
-3. Send it in headers for protected requests
-4. If 401, refresh from cookie → get new `accessToken`
-5. Logout → clear cookie + localStorage
-6. Use `req.user.role` for role-based auth
+- Uses hardware-based key pairs (FIDO2 standard)
+- Implement with [@simplewebauthn](https://github.com/MasterKale/SimpleWebAuthn) or [WebAuthn.io](https://webauthn.io)
 
 ---
 
-## ✅ What is `withCredentials`?
-
-In **Axios** or **Fetch**, `withCredentials: true` tells the browser to **include credentials** (like cookies, authorization headers, or TLS client certificates) **with cross-origin requests**.
-
-By default, **cross-origin requests don’t send cookies or HTTP auth headers**.
-
----
-
-## ✅ Why Do We Need `withCredentials`?
-
-If your backend sets a cookie (e.g. `Set-Cookie: token=xyz; HttpOnly; Secure; SameSite=None`) and the frontend doesn't use `withCredentials`, the cookie:
-
-- ❌ Won’t be **saved in the browser**.
-- ❌ Won’t be **sent with future requests** (e.g. refresh, protected routes, logout).
-
-That breaks session-based or cookie-based JWT auth.
-
----
-
-## ✅ When to Use It
-
-| Operation               | When to Use `withCredentials: true` |
-| ----------------------- | ----------------------------------- |
-| Login (Set Cookie)      | ✅ Required                         |
-| Logout (Clear Cookie)   | ✅ Required                         |
-| Refresh Token           | ✅ Required                         |
-| Access Protected Routes | ✅ Required if server reads cookie  |
-| Role-based Auth         | ✅ Required if cookie holds token   |
-
----
-
-## ✅ Example in Axios
+## 🧠 8. Attribute-Based Access Control (ABAC)
 
 ```js
-// Login (POST)
-axios.post(
-  "https://api.example.com/login",
-  {
-    email: "user@example.com",
-    password: "secret",
-  },
-  {
-    withCredentials: true,
+// middleware
+exports.checkAccess = (ruleFn) => {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!ruleFn(user)) return res.status(403).send("Denied");
+    next();
+  };
+};
+
+// Example usage
+app.get(
+  "/resource",
+  authenticate,
+  checkAccess((user) => user.department === "finance"),
+  (req, res) => {
+    res.send("Access granted");
   }
 );
-
-// Logout (GET or POST)
-axios.post(
-  "https://api.example.com/logout",
-  {},
-  {
-    withCredentials: true,
-  }
-);
-
-// Protected route
-axios.get("https://api.example.com/user", {
-  withCredentials: true,
-});
 ```
 
 ---
 
-## ✅ Example in Fetch
+## 🔒 Secure Implementation Best Practices
 
-```js
-// Login
-fetch("https://api.example.com/login", {
-  method: "POST",
-  credentials: "include",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, password }),
-});
-
-// Logout
-fetch("https://api.example.com/logout", {
-  method: "POST",
-  credentials: "include",
-});
-
-// Protected route
-fetch("https://api.example.com/user", {
-  method: "GET",
-  credentials: "include",
-});
-```
+| Practice                            | Details                                      |
+| ----------------------------------- | -------------------------------------------- |
+| ✅ `HttpOnly`, `Secure`, `SameSite` | For cookies storing tokens                   |
+| ✅ CSRF protection                  | Use tokens or SameSite cookies               |
+| ✅ XSS prevention                   | Escape output, use `helmet`, avoid inline JS |
+| ✅ Use HTTPS only                   | TLS is mandatory for auth flows              |
+| ✅ Token expiration                 | Access: short (15m), Refresh: long (7d)      |
+| ✅ Brute-force protection           | Add `express-rate-limit`                     |
+| ✅ Store password securely          | Use `bcrypt` with salt                       |
 
 ---
 
-## 🔐 Related Backend Settings
+## 🔌 Auth Libraries
 
-- Server must send:
-
-  ```http
-  Access-Control-Allow-Credentials: true
-  Access-Control-Allow-Origin: https://your-frontend.com
-  ```
-
-- Cookie must have:
-
-  ```http
-  Set-Cookie: token=abc123; HttpOnly; Secure; SameSite=None;
-  ```
-
----
-
-## 🧠 Why It Matters for Security
-
-- Prevents **XSS**: You store JWT in **HTTP-only cookie**, which JS can’t access.
-- Prevents **CSRF** (with additional safeguards).
-- Ensures session is maintained across origin.
+| Tool                       | Use                                    |
+| -------------------------- | -------------------------------------- |
+| **Passport.js**            | OAuth strategies                       |
+| **jsonwebtoken**           | JWT signing/verification               |
+| **NextAuth.js**            | Full Next.js authentication            |
+| **Firebase Auth**          | Serverless auth (email, Google, phone) |
+| **Clerk/Auth0/Magic.link** | Modern plug-n-play auth as a service   |
 
 ---
